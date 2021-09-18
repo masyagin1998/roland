@@ -1,6 +1,6 @@
 # roland
 
-[![roland — RObust Log ANalysis & ANomaly Detection](https://disk.yandex.ru/i/yzY-f8QN6BQmjg)](https://github.com/masyagin1998/roland)
+<img src="static/logo/roland.png" height="256" width="256">
 
 ## **roland** is a **RO**bust **L**og **AN**alysis & **AN**omaly **D**etection tool, written in pure C.
 

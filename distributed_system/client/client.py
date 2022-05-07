@@ -3,7 +3,7 @@ import asyncio
 import logging
 import sys
 from enum import Enum
-from random import randint
+from random import randint, choice
 from typing import Mapping, Any
 
 import aiohttp
@@ -244,6 +244,16 @@ class ManualClient(BaseClient):
 
 
 class AutoClient(BaseClient):
+    LOGINS = tuple({
+        "ivan",
+        "denis",
+        "mikhail",
+        "oleg",
+        "nikita",
+        "alexander",
+        "vladislav",
+    })
+
     def __init__(self, cfg: dict):
         super().__init__()
 
@@ -281,8 +291,13 @@ class AutoClient(BaseClient):
         async def logout():
             return await client.post(self.LOGOUT_PATH)
 
+        def gen_login_and_password() -> (str, str):
+            login_str = choice(self.LOGINS)
+            return login_str, login_str
+
+        login_str, password = gen_login_and_password()
         logger.info("trying to login...")
-        resp = await login('ivan', 'ivan')
+        resp = await login(login_str, password)
         logger.info("Successfully logged in!")
         client.cookie_jar.update_cookies(resp.cookies)
 

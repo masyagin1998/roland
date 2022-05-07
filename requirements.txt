@@ -1,0 +1,5 @@
+aiohttp==3.8.1
+aiohttp_session==2.11.0
+cryptography==3.3.2
+PyYAML==6.0
+requests==2.25.1

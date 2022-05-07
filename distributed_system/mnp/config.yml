@@ -1,0 +1,13 @@
+server:
+  host: "0.0.0.0"
+  port: 10000
+rw_database:
+  host: "0.0.0.0"
+  port: 5432
+ro_databases: []
+logs:
+  con: True
+  file: "./mnp.log"
+  server:
+    host: "0.0.0.0"
+    port: 20000

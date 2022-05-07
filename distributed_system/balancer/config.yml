@@ -1,0 +1,12 @@
+server:
+  host: "0.0.0.0"
+  port: 8000
+mnps:
+  - host: "0.0.0.0"
+    port: 10000
+logs:
+  con: True
+  file: "./balancer.log"
+  server:
+    host: "0.0.0.0"
+    port: 20000

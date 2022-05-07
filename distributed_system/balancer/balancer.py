@@ -46,6 +46,8 @@ class Balancer:
                               for mnp in self.__mnps]
         self.__cur_mnp_ind = 0
 
+        self.__cur_session_key = 1
+
     def run(self):
         self.__loop.run_forever()
 
@@ -76,6 +78,8 @@ class Balancer:
         session['login'] = login
         session['password'] = password
         session['logged_in'] = True
+        session['session_key'] = self.__cur_session_key
+        self.__cur_session_key += 1
 
         self.__logger.info("user '{}' successfully logged in".format(login))
 
@@ -114,7 +118,8 @@ class Balancer:
         if base == 'mnp':
             return await self.__transfer_mnp(req)
         else:
-            return web.json_response({'code': -1, 'description': 'could not transfer request'}, status=400)
+            self.__logger.warning('could not transfer request!')
+            return web.json_response({'code': -1, 'description': 'could not transfer request!'}, status=400)
 
     LOGOUT_PATH = BASE_PATH + '/logout'
 

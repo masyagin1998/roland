@@ -1,15 +1,40 @@
 #!/usr/bin/python3
+import asyncio
+import logging
 import sys
 from enum import Enum
+from random import randint
 from typing import Mapping, Any
 
+import aiohttp
 import requests
 import yaml
 
-from utils.utils import parse_args_as_dict, create_arguments_parser
+from utils.utils import parse_args_as_dict, create_arguments_parser, get_logger
 
 
-class ManualClient:
+class BaseClient:
+    BASE_PATH = '/api/v1'
+
+    LOGIN_PATH = BASE_PATH + '/login'
+
+    MNP_PATH = BASE_PATH + '/mnp'
+
+    GET_OPERATOR_PATH = MNP_PATH + '/get_operator'
+
+    GET_LATEST_MNP_PATH = MNP_PATH + '/get_latest_mnp'
+
+    GET_MNP_HISTORY_PATH = MNP_PATH + '/get_mnp_history'
+
+    ADD_MNP_PATH = MNP_PATH + '/add_mnp'
+
+    LOGOUT_PATH = MNP_PATH + '/logout'
+
+    def __init__(self):
+        pass
+
+
+class ManualClient(BaseClient):
     class Command(Enum):
         LOGIN = 1
         GET_OPERATOR = 2
@@ -40,6 +65,8 @@ class ManualClient:
             self.ready = False
 
     def __init__(self, cfg: dict):
+        super().__init__()
+
         self.__cfg = cfg.copy()
         self.__server_host = self.__cfg['server']['host']
         self.__server_port = self.__cfg['server']['port']
@@ -127,10 +154,6 @@ class ManualClient:
             if self.__cur_state.command == self.Command.ADD_MNP:
                 self.__cur_state.ready = True
 
-    BASE_PATH = '/api/v1'
-
-    LOGIN_PATH = BASE_PATH + '/login'
-
     def __login(self):
         resp = self.__session.post(
             self.__url_base + self.LOGIN_PATH,
@@ -142,10 +165,6 @@ class ManualClient:
         print(resp)
         print(resp.text)
 
-    MNP_PATH = BASE_PATH + '/mnp'
-
-    GET_OPERATOR_PATH = MNP_PATH + '/get_operator'
-
     def __get_operator(self):
         resp = self.__session.post(
             self.__url_base + self.GET_OPERATOR_PATH,
@@ -155,8 +174,6 @@ class ManualClient:
         )
         print(resp)
         print(resp.json())
-
-    GET_LATEST_MNP_PATH = MNP_PATH + '/get_latest_mnp'
 
     def __get_latest_mnp(self):
         resp = self.__session.post(
@@ -168,8 +185,6 @@ class ManualClient:
         print(resp)
         print(resp.json())
 
-    GET_MNP_HISTORY_PATH = MNP_PATH + '/get_mnp_history'
-
     def __get_mnp_history(self):
         resp = self.__session.post(
             self.__url_base + self.GET_MNP_HISTORY_PATH,
@@ -179,8 +194,6 @@ class ManualClient:
         )
         print(resp)
         print(resp.json())
-
-    ADD_MNP_PATH = MNP_PATH + '/add_mnp'
 
     def __add_mnp(self):
         resp = self.__session.post(
@@ -192,8 +205,6 @@ class ManualClient:
         )
         print(resp)
         print(resp.json())
-
-    LOGOUT_PATH = MNP_PATH + '/logout'
 
     def __logout(self):
         resp = self.__session.post(
@@ -232,9 +243,78 @@ class ManualClient:
             self.__send_request()
 
 
-class AutoClient:
+class AutoClient(BaseClient):
     def __init__(self, cfg: dict):
-        pass
+        super().__init__()
+
+        self.__loop = asyncio.new_event_loop()
+
+        self.__cfg = cfg.copy()
+        self.__server_host = self.__cfg['server']['host']
+        self.__server_port = self.__cfg['server']['port']
+
+        self.__count = self.__cfg['client']['count']
+
+        self.__url_base = 'http://{}:{}'.format(self.__server_host, self.__server_port)
+
+        self.__clients = [
+            aiohttp.ClientSession('http://{}:{}'.format(self.__server_host, self.__server_port), loop=self.__loop)
+            for __ in range(self.__count)]
+
+    async def __async_client(self, client: aiohttp.ClientSession, logger: logging.Logger):
+        async def login(login: str, password: str):
+            return await client.post(self.LOGIN_PATH, json={'login': login, 'password': password})
+
+        async def get_operator(phone_number: str):
+            return await client.post(self.GET_OPERATOR_PATH, json={'phone_number': phone_number})
+
+        async def get_latest_mnp(phone_number: str):
+            return await client.post(self.GET_LATEST_MNP_PATH, json={'phone_number': phone_number})
+
+        async def get_mnp_history(phone_number: str):
+            return await client.post(self.GET_MNP_HISTORY_PATH, json={'phone_number': phone_number})
+
+        async def add_mnp(phone_number: str, operator_name: str):
+            return await client.post(self.ADD_MNP_PATH,
+                                     json={'phone_number': phone_number, 'operator_name': operator_name})
+
+        async def logout():
+            return await client.post(self.LOGOUT_PATH)
+
+        logger.info("trying to login...")
+        resp = await login('ivan', 'ivan')
+        logger.info("Successfully logged in!")
+        client.cookie_jar.update_cookies(resp.cookies)
+
+        while True:
+            v = randint(2, 5)
+            if v == 2:
+                logger.info("requesting operator for phone number...")
+                resp = await get_operator('89999734509')
+                logger.info("got operator: {}".format(await resp.json()))
+            elif v == 3:
+                logger.info("requesting latest mnp for phone number...")
+                resp = await get_latest_mnp('89999734509')
+                logger.info("got latest mnp: {}".format(await resp.json()))
+            elif v == 4:
+                logger.info("requesting mnp history for phone number...")
+                resp = await get_mnp_history('89999734509')
+                logger.info("got mnp history: {}".format(await resp.json()))
+            elif v == 5:
+                logger.info("adding new mnp for phone number...")
+                resp = await add_mnp('89999734509', 'Yota')
+                logger.info("added mnp: {}".format(await resp.json()))
+            await asyncio.sleep(2)
+
+    def run(self):
+        tasks = []
+        for i, client in enumerate(self.__clients):
+            task = self.__loop.create_task(
+                coro=self.__async_client(client, get_logger({'logs': {'con': True}}, 'client-{}'.format(i))),
+                name='client')
+            tasks.append(task)
+
+        self.__loop.run_forever()
 
 
 desc_str = """Client.

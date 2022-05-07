@@ -1,5 +1,6 @@
 client:
-  mode: "manual"
+  mode: "auto"
+  count: 10
 server:
   host: "127.0.0.1"
   port: 8000

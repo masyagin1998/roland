@@ -39,18 +39,22 @@ class LogAnalyzer:
     ADD_LOG_PATH = BASE_PATH + '/add_log'
 
     async def __add_log(self, req: web.Request) -> web.Response:
-        self.__logger.info('got new log request')
+        self.__logger.info('got new log request',
+                           extra={'session_key': "???"})
         try:
             params = parse.parse_qs(await req.text())
         except (ValueError, KeyError) as e:
-            self.__logger.warning("unable to parse request!")
+            self.__logger.warning("unable to parse request!",
+                                  extra={'session_key': "???"})
             return web.json_response({'code': -1, 'description': 'unable to parse request!'}, status=400)
 
         # self.__logger.debug('new log request params: {}'.format(params))
         params = self.__clean_params(params)
-        self.__logger.debug('new log request params: {}'.format(params))
+        self.__logger.debug('new log request params: {}'.format(params),
+                            extra={'session_key': "???"})
 
-        self.__logger.info('successfully processed new log')
+        self.__logger.info('successfully processed new log',
+                           extra={'session_key': "???"})
 
         return web.json_response({'code': 0})
 

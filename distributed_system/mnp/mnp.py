@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from random import randint
 from typing import Mapping, Any, List
 
 import aiohttp
@@ -27,6 +28,9 @@ class MNP:
         self.__logger = logger
         self.__host = self.__cfg['server']['host']
         self.__port = self.__cfg['server']['port']
+
+        self.__min_timeout_ms = self.__cfg['server']['min_timeout_ms']
+        self.__max_timeout_ms = self.__cfg['server']['max_timeout_ms']
 
         runner = web.AppRunner(self.__make_app())
         self.__loop.run_until_complete(runner.setup())
@@ -59,8 +63,9 @@ class MNP:
 
     EXEC_PATH = BASE_PATH + '/exec'
 
-    async def __to_db(self, client: aiohttp.ClientSession, stmt: str, params: List[Any]) -> aiohttp.ClientResponse:
-        return await client.post(self.EXEC_PATH, json={'stmt': stmt, 'params': params})
+    async def __to_db(self, client: aiohttp.ClientSession, session_key: int, stmt: str,
+                      params: List[Any]) -> aiohttp.ClientResponse:
+        return await client.post(self.EXEC_PATH, json={'session_key': session_key, 'stmt': stmt, 'params': params})
 
     MNP_PATH = BASE_PATH + '/mnp'
 
@@ -79,20 +84,28 @@ LIMIT 1;
 """
 
     async def __get_operator(self, req: web.Request) -> web.Response:
-        self.__logger.info("got get_operator request")
+        self.__logger.info("got get_operator request",
+                           extra={'session_key': "???"})
         try:
             params: dict = await req.json()
             phone_number: str = params['phone_number']
+            session_key: str = params['session_key']
         except (ValueError, KeyError) as e:
-            self.__logger.warning("unable to parse request!")
+            self.__logger.warning("unable to parse request!",
+                                  extra={'session_key': "???"})
             return web.json_response({'code': -1, 'description': 'unable to parse request!'}, status=400)
 
-        self.__logger.debug("get_operator request params: {}".format(params))
+        self.__logger.debug("get_operator request params: {}".format(params),
+                            extra={'session_key': session_key})
+
+        await asyncio.sleep(randint(self.__min_timeout_ms, self.__max_timeout_ms) / 1000.0)
 
         client, cfg = self.get_ro_db()
-        self.__logger.debug("sending request to database {}:{}...".format(cfg['host'], cfg['port']))
-        db_resp = await self.__to_db(client, self.GET_OPERATOR_STMT, [phone_number])
-        self.__logger.debug("got response from database")
+        self.__logger.debug("sending request to database {}:{}...".format(cfg['host'], cfg['port']),
+                            extra={'session_key': session_key})
+        db_resp = await self.__to_db(client, session_key, self.GET_OPERATOR_STMT, [phone_number])
+        self.__logger.debug("got response from database",
+                            extra={'session_key': session_key})
 
         print(await db_resp.json())
 
@@ -113,20 +126,28 @@ LIMIT 1;
 """
 
     async def __get_latest_mnp(self, req: web.Request) -> web.Response:
-        self.__logger.info("got get_latest_mnp request")
+        self.__logger.info("got get_latest_mnp request",
+                           extra={'session_key': "???"})
         try:
             params: dict = await req.json()
             phone_number: str = params['phone_number']
+            session_key: str = params['session_key']
         except (ValueError, KeyError) as e:
-            self.__logger.warning("unable to parse request!")
+            self.__logger.warning("unable to parse request!",
+                                  extra={'session_key': "???"})
             return web.json_response({'code': -1, 'description': 'unable to parse request!'}, status=400)
 
-        self.__logger.debug("get_latest_mnp request params: {}".format(params))
+        self.__logger.debug("get_latest_mnp request params: {}".format(params),
+                            extra={'session_key': session_key})
+
+        await asyncio.sleep(randint(self.__min_timeout_ms, self.__max_timeout_ms) / 1000.0)
 
         client, cfg = self.get_ro_db()
-        self.__logger.debug("sending request to database {}:{}...".format(cfg['host'], cfg['port']))
-        db_resp = await self.__to_db(client, self.GET_LATEST_MNP_STMT, [phone_number])
-        self.__logger.debug("got response from database")
+        self.__logger.debug("sending request to database {}:{}...".format(cfg['host'], cfg['port']),
+                            extra={'session_key': session_key})
+        db_resp = await self.__to_db(client, session_key, self.GET_LATEST_MNP_STMT, [phone_number])
+        self.__logger.debug("got response from database",
+                            extra={'session_key': session_key})
 
         return web.json_response(await db_resp.json(), status=db_resp.status)
 
@@ -144,20 +165,28 @@ ORDER BY
 """
 
     async def __get_mnp_history(self, req: web.Request) -> web.Response:
-        self.__logger.info("got get_mnp_history request")
+        self.__logger.info("got get_mnp_history request",
+                           extra={'session_key': "???"})
         try:
             params: dict = await req.json()
             phone_number: str = params['phone_number']
+            session_key: str = params['session_key']
         except (ValueError, KeyError) as e:
-            self.__logger.warning("unable to parse request!")
+            self.__logger.warning("unable to parse request!",
+                                  extra={'session_key': "???"})
             return web.json_response({'code': -1, 'description': 'unable to parse request!'}, status=400)
 
-        self.__logger.debug("get_mnp_history request params: {}".format(params))
+        self.__logger.debug("get_mnp_history request params: {}".format(params),
+                            extra={'session_key': session_key})
+
+        await asyncio.sleep(randint(self.__min_timeout_ms, self.__max_timeout_ms) / 1000.0)
 
         client, cfg = self.get_ro_db()
-        self.__logger.debug("sending request to database {}:{}...".format(cfg['host'], cfg['port']))
-        db_resp = await self.__to_db(client, self.GET_MNP_HISTORY_STMT, [phone_number])
-        self.__logger.debug("got response from database")
+        self.__logger.debug("sending request to database {}:{}...".format(cfg['host'], cfg['port']),
+                            extra={'session_key': session_key})
+        db_resp = await self.__to_db(client, session_key, self.GET_MNP_HISTORY_STMT, [phone_number])
+        self.__logger.debug("got response from database",
+                            extra={'session_key': session_key})
 
         return web.json_response(await db_resp.json(), status=db_resp.status)
 
@@ -171,21 +200,29 @@ VALUES
 """
 
     async def __add_mnp(self, req: web.Request) -> web.Response:
-        self.__logger.info("got add_mnp request")
+        self.__logger.info("got add_mnp request",
+                           extra={'session_key': "???"})
         try:
             params: dict = await req.json()
             phone_number: str = params['phone_number']
             operator_name: str = params['operator_name']
+            session_key: str = params['session_key']
         except (ValueError, KeyError) as e:
-            self.__logger.warning("unable to parse request!")
+            self.__logger.warning("unable to parse request!",
+                                  extra={'session_key': "???"})
             return web.json_response({'code': -1, 'description': 'unable to parse request!'}, status=400)
 
-        self.__logger.debug("add_mnp request params: {}".format(params))
+        self.__logger.debug("add_mnp request params: {}".format(params),
+                            extra={'session_key': session_key})
+
+        await asyncio.sleep(randint(self.__min_timeout_ms, self.__max_timeout_ms) / 1000.0)
 
         client, cfg = self.__rw_database_client, self.__rw_database
-        self.__logger.debug("sending request to database {}:{}...".format(cfg['host'], cfg['port']))
-        db_resp = await self.__to_db(client, self.ADD_MNP_STMT, [phone_number, operator_name])
-        self.__logger.debug("got response from database")
+        self.__logger.debug("sending request to database {}:{}...".format(cfg['host'], cfg['port']),
+                            extra={'session_key': session_key})
+        db_resp = await self.__to_db(client, session_key, self.ADD_MNP_STMT, [phone_number, operator_name])
+        self.__logger.debug("got response from database",
+                            extra={'session_key': session_key})
 
         return web.json_response(await db_resp.json(), status=db_resp.status)
 
@@ -206,7 +243,7 @@ def main():
     cfg['server']['host'] = args.get('host', cfg['server']['host'])
     cfg['server']['port'] = args.get('port', cfg['server']['port'])
 
-    logger = get_logger(cfg, 'log_analyzer')
+    logger = get_logger(cfg, 'mnp')
     mnp = MNP(cfg, logger)
     mnp.run()
 

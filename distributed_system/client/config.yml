@@ -1,6 +1,8 @@
 client:
   mode: "auto"
   count: 10
+  min_timeout_ms: 1000
+  max_timeout_ms: 2000
 server:
   host: "127.0.0.1"
   port: 8000

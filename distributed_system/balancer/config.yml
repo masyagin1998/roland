@@ -1,6 +1,8 @@
 server:
   host: "0.0.0.0"
   port: 8000
+  min_timeout_ms: 100
+  max_timeout_ms: 2000
 mnps:
   - host: "0.0.0.0"
     port: 10000

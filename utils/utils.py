@@ -8,7 +8,7 @@ def get_logger(cfg: dict, name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(session_key)s - %(levelname)s - %(message)s')
 
     if cfg['logs'].get('con', False):
         ch = logging.StreamHandler()

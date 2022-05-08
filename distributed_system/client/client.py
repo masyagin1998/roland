@@ -254,6 +254,22 @@ class AutoClient(BaseClient):
         "vladislav",
     })
 
+    OPERATORS = tuple({
+        "Мегафон",
+        "МТС",
+        "Теле-2",
+        "Yota",
+        "Билайн",
+        "Старлайн",
+        "Ростелеком",
+        "Тинькофф Мобайл",
+        "Сбер Мобайл",
+        "ВТБ Мобайл",
+        "Аврора Телеком",
+        "Белитон",
+        "ГлобалТел"
+    })
+
     def __init__(self, cfg: dict):
         super().__init__()
 
@@ -264,6 +280,8 @@ class AutoClient(BaseClient):
         self.__server_port = self.__cfg['server']['port']
 
         self.__count = self.__cfg['client']['count']
+        self.__min_timeout_ms = self.__cfg['client']['min_timeout_ms']
+        self.__max_timeout_ms = self.__cfg['client']['max_timeout_ms']
 
         self.__url_base = 'http://{}:{}'.format(self.__server_host, self.__server_port)
 
@@ -295,31 +313,51 @@ class AutoClient(BaseClient):
             login_str = choice(self.LOGINS)
             return login_str, login_str
 
+        def gen_phone_number() -> str:
+            phone_number = "+79"
+            for i in range(9):
+                phone_number += f'{randint(0, 9)}'
+            return phone_number
+
+        def gen_operator_name() -> str:
+            operator_name = choice(self.OPERATORS)
+            return operator_name
+
         login_str, password = gen_login_and_password()
-        logger.info("trying to login...")
+        logger.info("trying to login...",
+                    extra={'session_key': "???"})
         resp = await login(login_str, password)
-        logger.info("Successfully logged in!")
+        logger.info("Successfully logged in!",
+                    extra={'session_key': "???"})
         client.cookie_jar.update_cookies(resp.cookies)
 
         while True:
             v = randint(2, 5)
             if v == 2:
-                logger.info("requesting operator for phone number...")
-                resp = await get_operator('89999734509')
-                logger.info("got operator: {}".format(await resp.json()))
+                logger.info("requesting operator for phone number...",
+                            extra={'session_key': "???"})
+                resp = await get_operator(gen_phone_number())
+                logger.info("got operator: {}".format(await resp.json()),
+                            extra={'session_key': "???"})
             elif v == 3:
-                logger.info("requesting latest mnp for phone number...")
-                resp = await get_latest_mnp('89999734509')
-                logger.info("got latest mnp: {}".format(await resp.json()))
+                logger.info("requesting latest mnp for phone number...",
+                            extra={'session_key': "???"})
+                resp = await get_latest_mnp(gen_phone_number())
+                logger.info("got latest mnp: {}".format(await resp.json()),
+                            extra={'session_key': "???"})
             elif v == 4:
-                logger.info("requesting mnp history for phone number...")
-                resp = await get_mnp_history('89999734509')
-                logger.info("got mnp history: {}".format(await resp.json()))
+                logger.info("requesting mnp history for phone number...",
+                            extra={'session_key': "???"})
+                resp = await get_mnp_history(gen_phone_number())
+                logger.info("got mnp history: {}".format(await resp.json()),
+                            extra={'session_key': "???"})
             elif v == 5:
-                logger.info("adding new mnp for phone number...")
-                resp = await add_mnp('89999734509', 'Yota')
-                logger.info("added mnp: {}".format(await resp.json()))
-            await asyncio.sleep(2)
+                logger.info("adding new mnp for phone number...",
+                            extra={'session_key': "???"})
+                resp = await add_mnp(gen_phone_number(), gen_operator_name())
+                logger.info("added mnp: {}".format(await resp.json()),
+                            extra={'session_key': "???"})
+            await asyncio.sleep(randint(self.__min_timeout_ms, self.__max_timeout_ms) / 1000.0)
 
     def run(self):
         tasks = []

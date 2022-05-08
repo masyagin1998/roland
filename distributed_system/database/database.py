@@ -35,6 +35,9 @@ class DataBase:
         self.__host = self.__cfg['server']['host']
         self.__port = self.__cfg['server']['port']
 
+        self.__min_timeout_ms = self.__cfg['server']['min_timeout_ms']
+        self.__max_timeout_ms = self.__cfg['server']['max_timeout_ms']
+
         runner = web.AppRunner(self.__make_app())
         self.__loop.run_until_complete(runner.setup())
         site = web.TCPSite(runner, self.__host, self.__port)
@@ -96,30 +99,50 @@ VALUES
     ($1, NOW(), $2);
 """
 
-    def __prepare_stmt(self, stmt: str, params: List[Any]):
-        self.__logger.debug("""preparing stmt "{}" with params {} """.format(stmt, params))
+    def __prepare_stmt(self, session_key: int, stmt: str, params: List[Any]):
+        self.__logger.debug("""preparing stmt "{}" with params {} """.format(str(stmt).replace('\n', '\\n'), params),
+                            extra={'session_key': session_key})
+        self.__logger.debug("stmt has {} params".format(len(params)),
+                            extra={'session_key': session_key})
         for i in range(len(params)):
-            stmt = stmt.replace("$" + str(i + 1), params[i])
-        self.__logger.debug("""statement prepared successfully to "{}" """.format(stmt))
+            if type(params[i]) is str:
+                p = "'{}'".format(params[i].replace("'", "\\'"))
+            else:
+                p = params[i]
+            self.__logger.debug("param ${} is being replaced by value {}...".format(i + 1, p),
+                                extra={'session_key': session_key})
+            stmt = stmt.replace("$" + str(i + 1), p)
+            self.__logger.debug("param ${} replaced successfully".format(i + 1),
+                                extra={'session_key': session_key})
+        self.__logger.debug("""statement prepared successfully to "{}" """.format(str(stmt).replace('\n', '\\n')),
+                            extra={'session_key': session_key})
         return stmt
 
     def __gen_mnp_history(self):
-        l = randint(1, 10)
-        return [choice(self.OPERATORS) for i in range(l)]
+        return [choice(self.OPERATORS) for __ in range(randint(1, 10))]
 
     async def __exec(self, req: web.Request) -> web.Response:
-        self.__logger.info("got exec request")
+        self.__logger.info("got exec request",
+                           extra={'session_key': "???"})
         try:
             params: dict = await req.json()
+            session_key = params['session_key']
             stmt: str = params['stmt']
             params: List[Any] = params['params']
         except (ValueError, KeyError) as e:
-            self.__logger.warning("unable to parse request!")
+            self.__logger.warning("unable to parse request!",
+                                  extra={'session_key': "???"})
             return web.json_response({'code': -1, 'description': 'unable to parse request!'}, status=400)
 
-        self.__logger.debug("exec request params: {}".format(await req.json()))
+        self.__logger.debug("exec request params: {}".format(str(await req.json()).replace('\n', '\\n')),
+                            extra={'session_key': session_key})
 
-        __ = self.__prepare_stmt(stmt, params)
+        await asyncio.sleep(randint(self.__min_timeout_ms, self.__max_timeout_ms) / 1000.0)
+
+        __ = self.__prepare_stmt(session_key, stmt, params)
+
+        await asyncio.sleep(randint(self.__min_timeout_ms, self.__max_timeout_ms) / 1000.0)
+
         if stmt.startswith('\nSELECT'):
             phone_number = params[0]
             if phone_number not in self.__storage:
@@ -144,7 +167,8 @@ VALUES
                 self.__storage[phone_number] = res
                 return web.json_response({'code': 0})
 
-        self.__logger.warning("unable to parse request!")
+        self.__logger.warning("unable to parse request!",
+                              extra={'session_key': session_key})
         return web.json_response({'code': -1, 'description': 'unable to parse request!'}, status=400)
 
 
